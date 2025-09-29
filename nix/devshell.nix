@@ -18,6 +18,11 @@
         config.allowUnfree = true;
         overlays = pkgs.overlays or [];
       };
+  libs = with pkgsU; [
+    openssl
+    libudev-zero
+    alsa-lib
+  ];
   toolPkgs = with pkgsU; [
     # Rust toolchain
     rustc
@@ -36,9 +41,7 @@
 
     # Common native deps many crates need
     pkg-config
-    openssl
     cacert
-    alsa-lib
 
     # Handy utilities
     jq
@@ -51,7 +54,7 @@
     taplo
     stylua
     fish
-  ];
+  ] ++ libs;
 
   fmtPkg = p: let
     pn =
@@ -153,16 +156,11 @@ in
       }
       {
         name = "PKG_CONFIG_PATH";
-        value = mkPkgConfigPath (with pkgs; [
-          openssl
-        ]);
+        value = mkPkgConfigPath libs;
       }
       {
         name = "LD_LIBRARY_PATH";
-        value = pkgs.lib.makeLibraryPath (with pkgs; [
-          alsa-lib
-          openssl
-        ]);
+        value = pkgs.lib.makeLibraryPath libs; 
       }
       {
         name = "RUSTFLAGS";
