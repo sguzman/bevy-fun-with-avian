@@ -38,6 +38,7 @@
     pkg-config
     openssl
     cacert
+    alsa-lib
 
     # Handy utilities
     jq

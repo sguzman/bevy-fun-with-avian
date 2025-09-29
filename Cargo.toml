@@ -45,6 +45,10 @@ pre-release-hook = [
 ]
 
 [dependencies]
+bevy = { version = "0.16", features = [
+  "x11"
+]}
+avian3d = "0.3"
 anyhow = "1"
 clap = { version = "4.5", features = ["derive"] }
 tracing = "0.1.41" # latest 0.1.x :contentReference[oaicite:10]{index=10}
