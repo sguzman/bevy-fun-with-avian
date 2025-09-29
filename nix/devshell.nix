@@ -22,13 +22,21 @@
     openssl
     libudev-zero
     alsa-lib
-  ];
+    libxkbcommon
+  ] ++ (with xorg; [
+    libX11
+    libXcursor
+    libXi
+    libXrandr
+    libxkbcommon
+  ]);
   toolPkgs = with pkgsU; [
     # Rust toolchain
     rustc
     cargo
     rustfmt
     clippy
+    vulkan-loader
 
     # Release + changelog
     cargo-release
