@@ -19,10 +19,11 @@
         overlays = pkgs.overlays or [];
       };
   libs = with pkgsU; [
-    openssl
-    libudev-zero
     alsa-lib
     libxkbcommon
+    openssl
+    udev
+    vulkan-loader
   ] ++ (with xorg; [
     libX11
     libXcursor
@@ -36,7 +37,7 @@
     cargo
     rustfmt
     clippy
-    vulkan-loader
+    vulkan-tools
 
     # Release + changelog
     cargo-release
@@ -173,6 +174,10 @@ in
       {
         name = "RUSTFLAGS";
         value = "-C link-arg=-Wl,-rpath,${pkgs.openssl.out}/lib";
+      }
+      {
+        name = "WGPU_BACKEND";
+        value = "vulkan";
       }
     ];
 
