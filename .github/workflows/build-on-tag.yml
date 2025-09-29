@@ -1,0 +1,120 @@
+name: Build on semver
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write  # needed to create releases and upload assets
+
+jobs:
+  build:
+    name: build ${{ matrix.target }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_suffix: linux-gnu
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_suffix: windows-msvc
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact_suffix: macos
+
+    env:
+      CARGO_TERM_COLOR: always
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install deps (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mold clang pkg-config libssl-dev
+          echo 'RUSTFLAGS=-C link-arg=-fuse-ld=mold' >> $GITHUB_ENV
+
+      - name: Install deps (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install llvm pkg-config
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.target }}-cargo-
+
+      - name: Build
+        run: cargo build --locked --release --target ${{ matrix.target }}
+
+      - name: Package artifact
+        shell: bash
+        run: |
+          BIN="bevy-fun-with-avian"
+          [[ "${{ matrix.target }}" == *windows* ]] && BIN="bevy-fun-with-avian.exe"
+          OUTDIR="dist/${{ matrix.artifact_suffix }}"
+          mkdir -p "$OUTDIR"
+          cp "target/${{ matrix.target }}/release/${BIN}" "$OUTDIR/"
+          [[ -f README.md ]] && cp README.md "$OUTDIR/" || true
+          if [[ "${{ matrix.target }}" == *windows* ]]; then
+            7z a "bevy-fun-with-avian-${{ matrix.artifact_suffix }}.zip" "$OUTDIR/*"
+          else
+            tar -C "dist" -czf "bevy-fun-with-avian-${{ matrix.artifact_suffix }}.tar.gz" "${{ matrix.artifact_suffix }}"
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bevy-fun-with-avian-${{ matrix.artifact_suffix }}
+          path: |
+            bevy-fun-with-avian-${{ matrix.artifact_suffix }}.tar.gz
+            bevy-fun-with-avian-${{ matrix.artifact_suffix }}.zip
+          if-no-files-found: ignore
+
+  release:
+    name: create/update GitHub Release and upload assets
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')  # only when a tag triggered this run
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Create or update release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            artifacts/**/bevy-fun-with-avian-*.tar.gz
+            artifacts/**/bevy-fun-with-avian-*.zip
+
