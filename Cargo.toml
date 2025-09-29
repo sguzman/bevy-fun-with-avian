@@ -47,7 +47,6 @@ pre-release-hook = [
 [dependencies]
 bevy = { version = "0.16", features = [
   "serialize",
-  "dynamic_linking",
   "bevy_log",
   "multi_threaded",
   "x11"
