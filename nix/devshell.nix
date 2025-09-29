@@ -159,7 +159,10 @@ in
       }
       {
         name = "LD_LIBRARY_PATH";
-        value = pkgs.lib.makeLibraryPath [pkgs.openssl];
+        value = pkgs.lib.makeLibraryPath (with pkgs; [
+          alsa-lib
+          openssl
+        ]);
       }
       {
         name = "RUSTFLAGS";
